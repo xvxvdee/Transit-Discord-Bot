@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 import time
 import discord
 from discord.ext import commands
+from discord_components import DiscordComponents, ComponentsBot, Button, Select, SelectOption
+
 import os
 
 #Web scrapping
@@ -43,12 +45,7 @@ def get_GOTrainStatus(URL,xpath):
     driver = webdriver.Chrome(ChromeDriverManager().install())
     driver.get(URL)
     container = driver.find_element(by=By.XPATH, value=xpath)
-    # delay = container.find_elements(by=By.CLASS_NAME,value="notification-content")
-    # for i in delay:
-    #     delay_status = i.find_elements(by=By.CLASS_NAME,value="columns small-4")
-    #     print("-----")
-    #     print(delay_status.text)
-    #     print("-----")
+   
 
     stations = []
     items = container.find_elements(by=By.TAG_NAME, value="li")
@@ -71,11 +68,26 @@ def get_TTCStatus(URL):
         ttc_alerts.append(t.text)
         # print(t.text)
     ttc_alerts = [x.split("\n") for x in ttc_alerts if len(x)>1] 
+    # print(ttc_alerts)
+    # embed=discord.Embed(title="Last updated:", description="May 12, 10:29 PM", color=0xfa0000)
+    # embed.set_author(name="TTC Service Alerts", url="https://www.ttc.ca/service-alerts")
+    # embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1034/1034795.png")
+    # for i in ttc_alerts:
+    #     if len(i)==2:
+    #         embed.add_field(name=i[0], value=i[1], inline=False)
+    #     else:
+    #         embed.add_field(name="Other Updates...", value=i[0], inline=False)
     for i in ttc_alerts:
-        embed=discord.Embed(title=i[0],  description=i[1], color=0xff0000)
-        embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1034/1034795.png")
-        embed.set_footer(text="https://www.ttc.ca/service-alerts")
-        ttc_alerts_embed.append(embed)
+        if len(i)==2:
+            embed=discord.Embed(title=i[0],  description=i[1], url="https://www.ttc.ca/service-alerts", color=0xff0000)
+            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1034/1034795.png")
+            embed.set_footer(text="https://www.ttc.ca/service-alerts")
+            ttc_alerts_embed.append(embed)
+        else:
+            embed=discord.Embed(title="Other Updates", url="https://www.ttc.ca/service-alerts", description=i[0], color=0xff0000)
+            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1034/1034795.png")
+            embed.set_footer(text="https://www.ttc.ca/service-alerts")
+            ttc_alerts_embed.append(embed)
     driver.close() #DRIVER MUST BE INSTALLED AGAIN AFTER THIS IS RAN
     return ttc_alerts_embed
 
@@ -85,23 +97,23 @@ def get_TTCStatus(URL):
 # print(get_GOTrainStatus(URL_goTrain,train_xpath))
 
 # Build embeds ----------------------------------------------------------------
-def setup_GOStation(updates):
-    go_embed = []
-    for alerts in updates:
-        station=alerts.split("\n")
-        info = " : ".join(station[:2])
-        descript = "\n ".join(station[2:])
-        if len(descript)>400:
-            embed=discord.Embed(title=info,  url="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates", description=descript[:400]+"...", color=0x74a42d)
-            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/3267/3267628.png")
-            embed.set_footer(text="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates")
-            go_embed.append(embed)
-        else:
-            embed=discord.Embed(title=info,  url="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates", description=descript, color=0x74a42d)
-            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/3267/3267628.png")
-            embed.set_footer(text="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates")
-            go_embed.append(embed)
-    return go_embed
+# def setup_GOStation(updates):
+#     go_embed = []
+#     for alerts in updates:
+#         station=alerts.split("\n")
+#         info = " : ".join(station[:2])
+#         descript = "\n ".join(station[2:])
+#         if len(descript)>400:
+#             embed=discord.Embed(title=info,  url="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates", description=descript[:400]+"...", color=0x74a42d)
+#             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/3267/3267628.png")
+#             embed.set_footer(text="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates")
+#             go_embed.append(embed)
+#         else:
+#             embed=discord.Embed(title=info,  url="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates", description=descript, color=0x74a42d)
+#             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/3267/3267628.png")
+#             embed.set_footer(text="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates")
+#             go_embed.append(embed)
+#     return go_embed
 
 def setup_GOBus(updates):
     go_embed = []
@@ -116,6 +128,53 @@ def setup_GOBus(updates):
         go_embed.append(embed)
     return go_embed
 
+def fix_textGOTrain(text):
+    res = []
+    for i in range(len(text)):
+        if text[i] == "Delay of":
+            res.append("**Delay of: **" + text[i+1])
+            i=i+1
+        elif text[i] == "status":
+            res.append("**Status: **"+text[i+1]+"\n\n")
+            i=i+1
+        elif text[i].isupper(): res.append(text[i]+"\n")
+        else: res.append(text[i])
+    return res
+
+def setup_GOTrain(updates):
+    go_embed = []
+    
+    for alerts in updates:
+        station=fix_textGOTrain(alerts.split("\n"))
+        
+        if len(station) ==2:continue
+        info = " : ".join(station[:2])
+        descript = "\n ".join(station[2:])
+        
+        embed=discord.Embed(title=info, url="https://cdn-icons.flaticon.com/png/512/2539/premium/2539414.png?token=exp=1652418832~hmac=e1052dd91732038893af861d7dab88d6", description=descript, color=0x74a42d)
+        embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/741/741411.png")
+        embed.set_footer(text="Find out more at gotransit.com/wheresmybus")
+        go_embed.append(embed)
+    return go_embed
+
+
+# GETTING SPECIFIC TRAINS/BUSES/ETC -------------------------------------------------------------
+# def specific_GOStation(updates,station):
+
+#     go_embed=0
+#     for alerts in updates:
+#         stations=alerts.split("\n")
+#         print(stations[0],station, station.strip() in stations[0])
+#         print(type(stations[0]),type(station), len(station),len(stations[0]))
+
+#         if stations[0] in station:
+#             info = " : ".join(stations[:2])
+#             descript = "\n ".join(stations[2:])
+#             embed=discord.Embed(title=info,  url="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates", description=descript, color=0x74a42d)
+#             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/3267/3267628.png")
+#             embed.set_footer(text="https://www.gotransit.com/en/trip-planning/go-service-updates#station-updates")
+#             go_embed=embed
+#     return go_embed
 
 #DISCORD BOT ----------------------------------------------------------------
 intents = discord.Intents.default()
@@ -134,11 +193,30 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     await client.change_presence(activity=discord.Game('Subway Surfers'))
 
+
 @client.event
 async def on_message(message):
 
     if message.author == client.user:
         return
+    
+    if message.content.startswith('$getTTC'):
+        m = message.content.replace('$getTTC','')
+        await message.channel.send(m)
+    
+
+    # if message.content.startswith('$getGOStation'):
+    #     station = message.content.replace('$getGOStation','')
+    #     if len(station)>=20:
+    #         await message.channel.send("Make sure you entered the name of the station correctly!")
+    #     gostation_delays = get_GOTransitStatus(URL_goStation,station_xpath)
+    #     res = specific_GOStation(gostation_delays,station)
+    #     if res == 0:
+    #         await message.channel.send("No Alerts!")
+    #     else:
+    #         await message.channel.send(embed=res)
+
+
     if message.content.startswith('$TTC'):
         await message.channel.send('Searching for TTC Service Alerts...')
         ttc_delays = get_TTCStatus(URL_TTC)
@@ -150,17 +228,17 @@ async def on_message(message):
                 time.sleep(1)
 
 
-    if message.content.startswith('$GOStation'):
-        await message.channel.send('Searching for GO Service Updates: GO Stations ...')
-        # try:
-        gostation_delays = get_GOTransitStatus(URL_goStation,station_xpath)
-        if len(gostation_delays)==0: 
-            await message.channel.send('No alerts at the moment.')
-        else:
-            embeds = setup_GOStation(gostation_delays)
-            for i in embeds:
-                await message.channel.send(embed=i)
-                time.sleep(1)
+    # if message.content.startswith('$GOStation'):
+    #     await message.channel.send('Searching for GO Service Updates: GO Stations ...')
+    #     # try:
+    #     gostation_delays = get_GOTransitStatus(URL_goStation,station_xpath)
+    #     if len(gostation_delays)==0: 
+    #         await message.channel.send('No alerts at the moment.')
+    #     else:
+    #         embeds = setup_GOStation(gostation_delays)
+    #         for i in embeds:
+    #             await message.channel.send(embed=i)
+    #             time.sleep(1)
     # except:
         # await message.channel.send("Please try again. An error has occured :(")
     if message.content.startswith('$GOBus'):
@@ -176,15 +254,18 @@ async def on_message(message):
                 time.sleep(1)
 
     if message.content.startswith('$GOTrain'):
-        await message.channel.send('Searching for GO Service Updates: GO Bus ...')
+        await message.channel.send('Searching for GO Service Updates: GO Train ...')
         # try:
-        gobus_delays = get_GOTransitStatus(URL_goBus,bus_xpath)
-        if len(gobus_delays)==0: 
+        gotrain_delays = get_GOTrainStatus(URL_goTrain,train_xpath)
+        print(len(gotrain_delays))
+        if len(gotrain_delays)==0: 
             await message.channel.send('No alerts at the moment.')
         else:
-            embeds = setup_GOBus(gobus_delays)
-            for i in embeds:
-                await message.channel.send(embed=i)
-                time.sleep(1)
+            embeds = setup_GOTrain(gotrain_delays)
+            if len(embeds) == 0: await message.channel.send("No alerts!")
+            else:
+                for i in embeds:
+                    await message.channel.send(embed=i)
+                    time.sleep(1)
 
 client.run(DISCORD_TOKEN)
