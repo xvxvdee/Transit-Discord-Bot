@@ -121,10 +121,10 @@ async def on_message(message):
                 await message.channel.send(embed=i)
                 time.sleep(1)
 
-    if message.content.startswith('$TTC'):
+    if message.content == '$TTC':
         await message.channel.send('🚇 Searching for TTC Service Alerts... ')
         ttc_delays = get_TTCStatus(URL_TTC,1,-1)
-        print(len(ttc_delays))
+
         if len(ttc_delays)==0: 
             await message.channel.send('👍 No alerts at the moment.')
         else:
@@ -132,6 +132,12 @@ async def on_message(message):
                 await message.channel.send(embed=i)
                 time.sleep(1)
 
-
-
+    if message.content == '$help':
+        embed=discord.Embed(title="Transit Updates", url="https://www.ttc.ca/service-alerts", description="Need some help?", color=0xf10404)
+        embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1584/1584871.png")
+        embed.add_field(name="$TTC", value="\n".join(["Will return all service updates.","*Ex. $TTC*"]), inline=False)
+        embed.add_field(name="$getTTC [BUS # / SUBWAY LINE #]", value="\n".join(["Will return updates for a specific bus or subway line.","*Ex. $getTTC 2*"]), inline=False)
+        embed.add_field(name="$GO", value="Coming Soon...", inline=False)
+        embed.set_footer(text="All icons created by Freepik - Flaticon https://www.flaticon.com/free-icons")
+        await message.channel.send(embed=embed)
 client.run(DISCORD_TOKEN)
