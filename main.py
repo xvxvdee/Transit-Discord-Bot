@@ -39,7 +39,12 @@ def ttcEmbed_odd(data,pic,lastUpdated): # Create embed for other alerts
 
 #TTC SERVICE ALERTS --------------------------------------------------------
 def get_TTCStatus(URL,option,number):
-    driver = webdriver.Chrome(ChromeDriverManager().install())
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
     driver.get(URL)
 
     # Select all alerts
