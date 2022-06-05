@@ -2,5 +2,3 @@ discord
 requests
 python-dotenv
 selenium
-time
-os
