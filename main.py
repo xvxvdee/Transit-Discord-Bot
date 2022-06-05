@@ -62,7 +62,7 @@ def get_TTCStatus(URL,option,number):
     lastUpdated = driver.find_element(by=By.XPATH,value = "/html/body/div[1]/main/div[2]/div/div[5]/div/div[1]/div/div/div/div/div/span[2]").text
 
     # footer Image
-    pic = "https://cdn-icons.flaticon.com/png/512/416/premium/416739.png?token=exp=1653616579~hmac=9c3d0cac7da165e6fb02e5176add135b"
+    pic = "https://cdn-icons-png.flaticon.com/512/5348/5348561.png"
     
     # BUILD EMBEDS -----------------------------------------------
 
