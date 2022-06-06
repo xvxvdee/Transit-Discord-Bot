@@ -15,26 +15,41 @@ import os
 #Web scrapping
 
 URL_TTC = "https://www.ttc.ca/service-alerts"
+URL_GRT = "https://www.grt.ca/en/service-updates/service-alerts.aspx"
 
 station_xpath = "//*[@id='station-updates']/div/ul"
 bus_xpath="//*[@id='bus-updates']"
 train_xpath="//*[@id='train-updates']/div/ul"
 
-#TTC EMBEDS HELPERS --------------------------------------------------------
+#EMBEDS HELPERS --------------------------------------------------------
 
-def ttcEmbed_reg(data,pic,lastUpdated): # Create embed for alerts with bus/train number 
-    embed=discord.Embed(title=data[0],  description=" ".join(data[1:]), url="https://www.ttc.ca/service-alerts", color=0xff0000)
-    embed.set_thumbnail(url=pic)
-    embed.add_field(name="Last updated", value=lastUpdated, inline=False)
-    embed.set_footer(text="https://www.ttc.ca/service-alerts")
-    return embed
+def Embed_reg(data, pic,lastUpdated, link, option): # Create embed for alerts with bus/train number 
+    if option == 0:
+        embed=discord.Embed(title=data[0],  description=" ".join(data[1:]), url=link, color=0xff0000)
+        embed.set_thumbnail(url=pic)
+        embed.add_field(name="Last updated", value=lastUpdated, inline=False)
+        embed.set_footer(text=link)
+        return embed
+    else:
+        embed=discord.Embed(title=data[0],  description=" ".join(data[1:]), url=link, color=0x0079DD)
+        embed.set_thumbnail(url=pic)
+        embed.set_footer(text=link)
+        return embed
 
-def ttcEmbed_odd(data,pic,lastUpdated): # Create embed for other alerts
-    embed=discord.Embed(title="Other Updates", url="https://www.ttc.ca/service-alerts", description=data[0], color=0xff0000)
-    embed.set_thumbnail(url=pic)
-    embed.add_field(name="Last updated", value=lastUpdated, inline=False)
-    embed.set_footer(text="https://www.ttc.ca/service-alerts")
-    return embed
+
+def Embed_odd(data,pic,lastUpdated, link, option): # Create embed for other alerts
+    if option == 0:
+        embed=discord.Embed(title="Other Updates", url=link, description=data[0], color=0xff0000)
+        embed.set_thumbnail(url=pic)
+        embed.add_field(name="Last updated", value=lastUpdated, inline=False)
+        embed.set_footer(text=link)
+        return embed
+    else:
+        embed=discord.Embed(title="Other Updates", url=link, description=data[0],  color=0x0079DD)
+        embed.set_thumbnail(url=pic)
+        embed.set_footer(text=link)
+        return embed
+
 
 
 #TTC SERVICE ALERTS --------------------------------------------------------
@@ -45,6 +60,7 @@ def get_TTCStatus(URL,option,number):
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    # driver = webdriver.Chrome(ChromeDriverManager().install())
     driver.get(URL)
 
     # Select all alerts
@@ -61,29 +77,65 @@ def get_TTCStatus(URL,option,number):
     # Get last updated time
     lastUpdated = driver.find_element(by=By.XPATH,value = "/html/body/div[1]/main/div[2]/div/div[5]/div/div[1]/div/div/div/div/div/span[2]").text
 
-    # footer Image
-    pic = "https://cdn-icons-png.flaticon.com/512/5348/5348561.png"
+    # icon Image
+    icon_ttc = "https://cdn-icons-png.flaticon.com/512/5348/5348561.png"
+    
+    link_ttc = URL_TTC
     
     # BUILD EMBEDS -----------------------------------------------
 
     if option == 1:  # Create embeds for all alerts
         for i in ttc_alerts:
             if len(i)>=2:
-                ttc_alerts_embed.append(ttcEmbed_reg(i,pic,lastUpdated))
+                ttc_alerts_embed.append(Embed_reg(i,icon_ttc,lastUpdated,link_ttc,0))
             else:
-                ttc_alerts_embed.append(ttcEmbed_odd(i,pic,lastUpdated))
+                ttc_alerts_embed.append(Embed_odd(i,icon_ttc,lastUpdated,link_ttc,0))
     else: # Create embed for specific bus/train 
         for i in ttc_alerts: 
             if number == i[0]:
                 if len(i)>=2:
-                    ttc_alerts_embed.append(ttcEmbed_reg(i,pic,lastUpdated))
+                    ttc_alerts_embed.append(Embed_reg(i,icon_ttc,lastUpdated,link_ttc,0))
                 else:
-                    ttc_alerts_embed.append(ttcEmbed_odd(i,pic,lastUpdated))
-
+                    ttc_alerts_embed.append(Embed_odd(i,icon_ttc,lastUpdated,link_ttc,0))
                 break
     driver.close() #DRIVER MUST BE INSTALLED AGAIN AFTER THIS IS RAN
     return ttc_alerts_embed
 
+
+# GRT ALERTS -----------------------------------------------------------------
+
+def get_GRTStatus(URL):
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    # driver = webdriver.Chrome(ChromeDriverManager().install())
+    driver.get(URL)
+
+    # Select all alerts
+    items = driver.find_elements(by=By.CLASS_NAME,value ="grt-alerts-item")
+    grt_alerts = [i.text.split("\n") for i in items]
+
+    print(grt_alerts)
+
+     # icon Image
+    icon_grt = "https://cdn-icons-png.flaticon.com/512/829/829378.png"
+    
+    link_grt = URL_GRT
+    
+    # BUILD EMBEDS -----------------------------------------------
+    grt_alerts_embed = []
+    for i in grt_alerts:
+        if len(i)>=2:
+            grt_alerts_embed.append(Embed_reg(i,icon_grt," ",link_grt,1))
+        else:
+            grt_alerts_embed.append(Embed_odd(i,icon_grt," ",link_grt,1))
+
+    driver.close() #DRIVER MUST BE INSTALLED AGAIN AFTER THIS IS RAN
+    return grt_alerts_embed
+     
 
 # print(get_TTCStatus(URL_TTC))
 
@@ -142,11 +194,27 @@ async def on_message(message):
         except NoSuchElementException:
             await message.channel.send('*Uh oh! Please try again. An error has occured.* <@601912927959777300>')
 
+    if message.content == '$GRT':
+        try:
+            await message.channel.send('🚇 Searching for GRT Service Alerts... ')
+            grt_delays = get_GRTStatus(URL_GRT)
+
+            if len(grt_delays)==0: 
+                await message.channel.send('👍 No alerts at the moment.')
+            else:
+                for i in grt_delays:
+                    await message.channel.send(embed=i)
+                    time.sleep(1)
+
+        except NoSuchElementException:
+            await message.channel.send('*Uh oh! Please try again. An error has occured.* <@601912927959777300>')
+
     if message.content == '$help':
         embed=discord.Embed(title="Transit Updates", url="https://www.ttc.ca/service-alerts", description="Need some help?", color=0xf10404)
         embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1584/1584871.png")
         embed.add_field(name="$TTC", value="\n".join(["Will return all service updates.","*Ex. $TTC*"]), inline=False)
         embed.add_field(name="$getTTC [BUS # / SUBWAY LINE #]", value="\n".join(["Will return updates for a specific bus or subway line.","*Ex. $getTTC 2*"]), inline=False)
+        embed.add_field(name="$GRT", value="\n".join(["Will return all service updates.","*Ex. $GRT*"]), inline=False)
         embed.add_field(name="$GO", value="Coming Soon...", inline=False)
         embed.set_footer(text="All icons created by Freepik - Flaticon https://www.flaticon.com/free-icons")
         await message.channel.send(embed=embed)
