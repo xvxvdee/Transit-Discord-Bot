@@ -59,8 +59,7 @@ def get_TTCStatus(URL,option,number):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
-    # driver = webdriver.Chrome(ChromeDriverManager().install())
+    driver = webdriver.Chrome()
     driver.get(URL)
 
     # Select all alerts
@@ -110,8 +109,7 @@ def get_GRTStatus(URL):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
-    # driver = webdriver.Chrome(ChromeDriverManager().install())
+    driver = webdriver.Chrome()
     driver.get(URL)
 
     # Select all alerts
@@ -145,13 +143,12 @@ def get_GRTStatus(URL):
 intents = discord.Intents.default()
 intents.typing = False
 intents.presences = False
-client = discord.Client()
-# client =  commands.Bot(command_prefix='$',intents = intents)
+intents.message_content = True
+client = commands.Bot(command_prefix='$',intents = intents)
 
 load_dotenv() # Loads the .env file that resides on the same level as the script.
 
 DISCORD_TOKEN = os.getenv("TOKEN") # Grab the API token from the .env file.
-
 
 @client.event
 async def on_ready():
@@ -166,18 +163,21 @@ async def on_message(message):
         return
     
     if message.content.startswith('$getTTC'):
+        print("here")
         try:
             m = message.content.replace('$getTTC','').strip()
+            if not m.isalnum():
+                await message.channel.send('⚠️ Please enter a bus/train route.')   
+                return
             await message.channel.send('🚇 Searching for TTC Service Alerts for the '+m+'...')
             ttc_delays = get_TTCStatus(URL_TTC,2,m)
-
             if len(ttc_delays)==0: 
                 await message.channel.send('👍 No alerts for the '+m+' at the moment.')            
             else:
                 for i in ttc_delays:
                     await message.channel.send(embed=i)
                     time.sleep(1)
-        except NoSuchElementException:
+        except NoSuchElementException :
             await message.channel.send('*Uh oh! Please try again. An error has occured.* <@601912927959777300>')
 
     if message.content == '$TTC':
@@ -210,6 +210,7 @@ async def on_message(message):
             await message.channel.send('*Uh oh! Please try again. An error has occured.* <@601912927959777300>')
 
     if message.content == '$help':
+        print("here")
         embed=discord.Embed(title="Transit Updates", url="https://www.ttc.ca/service-alerts", description="Need some help?", color=0xf10404)
         embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1584/1584871.png")
         embed.add_field(name="$TTC", value="\n".join(["Will return all service updates.","*Ex. $TTC*"]), inline=False)
